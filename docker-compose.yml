@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # 1. DATABASE (MySQL)
+  db:
+    image: mysql:5.7
+    platform: linux/amd64
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: db_penutupan_jalan
+      MYSQL_USER: admin_mbaklina
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    networks:
+      - jaringan-mbaklina
+
+  # 2. BACKEND API
+  backend:
+    build: ./backend
+    restart: always
+    environment:
+      DB_HOST: db
+      DB_USER: admin_mbaklina
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: db_penutupan_jalan
+      JWT_SECRET: rahasia_negara
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    networks:
+      - jaringan-mbaklina
+
+  # 3. FRONTEND REACT
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - REACT_APP_API_URL=http://192.168.106.5:5000
+    restart: always
+    ports:
+    - "8080:80"
+    networks:
+      - jaringan-mbaklina
+
+  # 4. ModSecurity WAF + Nginx
+  waf:
+    image: owasp/modsecurity-crs:nginx
+    restart: always
+    ports:
+      - "80:80" # Pintu Utama (Publik)
+    environment:
+      - PROXY=1
+      - BACKEND=http://frontend:80
+      # Jika url mengandung /api, lempar ke Backend
+      - LOCATION_API=/api
+      - PROXY_API=http://backend:5000
+      # Mode Deteksi 
+      - MODSEC_RULE_ENGINE=On
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - jaringan-mbaklina
+
+networks:
+  jaringan-mbaklina:
