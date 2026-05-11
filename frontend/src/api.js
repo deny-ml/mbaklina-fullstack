@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL,
+    baseURL: 'https://mbaklina-fullstack.vercel.app',
 });
 
 // Ini adalah bagian penting: Interceptor
